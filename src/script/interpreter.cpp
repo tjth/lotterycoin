@@ -5,6 +5,8 @@
 
 #include "interpreter.h"
 
+#include <stdio.h>
+
 #include "primitives/transaction.h"
 #include "crypto/ripemd160.h"
 #include "crypto/sha1.h"
@@ -12,6 +14,7 @@
 #include "pubkey.h"
 #include "script/script.h"
 #include "uint256.h"
+#include "util.h"
 
 using namespace std;
 
@@ -370,8 +373,35 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                     break;
                 }
 
-                case OP_NOP1: case OP_NOP3: case OP_NOP4: case OP_NOP5:
-                case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9: case OP_NOP10:
+                case OP_BEACON:
+                {
+                  LogPrintf("ENTERING BEACON INTERPRETING\n");
+                  /*if (stack.size() < 3)
+                    return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+                   
+                  //bits to push back, start and end blocks to compute hash of 
+                  valtype bits = stacktop(-1);
+                  valtype endBlock = stacktop(-2);
+                  valtype startBlock = stacktop(-3);
+
+                  //clean up arguments from stack
+                  popstack(stack);
+                  popstack(stack);
+                  popstack(stack);
+                  */
+                  //TODO: hash based on params
+                  //int num = rand() % 10;
+                  int num = 1;
+                  LogPrintf("DEBUG BEACON: pushing random: %d", num);
+                  
+                  CScriptNum r(num);
+                  stack.push_back(r.getvch());
+                  
+                  break;
+                }
+
+                case OP_NOP1: case OP_NOP5: case OP_NOP6: case OP_NOP7: 
+                case OP_NOP8: case OP_NOP9: case OP_NOP10:
                 {
                     if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)
                         return set_error(serror, SCRIPT_ERR_DISCOURAGE_UPGRADABLE_NOPS);

@@ -132,7 +132,7 @@ const char* GetOpName(opcodetype opcode)
     // expanson
     case OP_NOP1                   : return "OP_NOP1";
     case OP_CHECKLOCKTIMEVERIFY    : return "OP_CHECKLOCKTIMEVERIFY";
-    case OP_NOP3                   : return "OP_NOP3";
+    case OP_BEACON                 : return "OP_BEACON";
     case OP_NOP4                   : return "OP_NOP4";
     case OP_NOP5                   : return "OP_NOP5";
     case OP_NOP6                   : return "OP_NOP6";
@@ -208,6 +208,32 @@ bool CScript::IsPayToScriptHash() const
             (*this)[0] == OP_HASH160 &&
             (*this)[1] == 0x14 &&
             (*this)[22] == OP_EQUAL);
+}
+
+//TODO: remove comments when we have a hash op
+bool CScript::IsLottery(const_iterator pc) const
+{
+  bool hasBeacon = false;
+  //bool hasHash = false;
+  while (pc < end())
+  {
+    opcodetype opcode;
+    if (!GetOp(pc, opcode))
+      return false;
+
+    if (opcode == OP_BEACON) 
+      hasBeacon = true;
+
+    //if (opcode == OP_FLEXIHASH)
+      //hasHash = true; 
+  }
+
+  return hasBeacon /*&& hasHash*/;
+} 
+
+bool CScript::IsLottery() const
+{
+    return this->IsLottery(begin());
 }
 
 bool CScript::IsPushOnly(const_iterator pc) const

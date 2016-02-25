@@ -164,7 +164,8 @@ enum opcodetype
     OP_NOP1 = 0xb0,
     OP_CHECKLOCKTIMEVERIFY = 0xb1,
     OP_NOP2 = OP_CHECKLOCKTIMEVERIFY,
-    OP_NOP3 = 0xb2,
+    OP_BEACON = 0xb2,
+    OP_NOP3 = OP_BEACON,
     OP_NOP4 = 0xb3,
     OP_NOP5 = 0xb4,
     OP_NOP6 = 0xb5,
@@ -601,6 +602,9 @@ public:
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */
     bool IsPushOnly(const_iterator pc) const;
     bool IsPushOnly() const;
+
+    bool IsLottery(const_iterator pc) const;
+    bool IsLottery() const;
 
     /**
      * Returns whether the script is guaranteed to fail at execution,

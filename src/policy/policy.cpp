@@ -92,6 +92,12 @@ bool IsStandardTx(const CTransaction& tx, std::string& reason)
     unsigned int nDataOut = 0;
     txnouttype whichType;
     BOOST_FOREACH(const CTxOut& txout, tx.vout) {
+        if (txout.scriptPubKey.IsLottery()) {
+          LogPrintf("DEBUG: transaction is lottery");
+          continue;
+        }
+
+
         if (!::IsStandard(txout.scriptPubKey, whichType)) {
             reason = "scriptpubkey";
             return false;

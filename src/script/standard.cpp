@@ -31,6 +31,7 @@ const char* GetTxnOutputType(txnouttype t)
     case TX_SCRIPTHASH: return "scripthash";
     case TX_MULTISIG: return "multisig";
     case TX_NULL_DATA: return "nulldata";
+    case TX_LOTTERY: return "lottery";
     }
     return NULL;
 }
@@ -188,6 +189,7 @@ bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
         return true;
     }
     // Multisig txns have more than one address...
+    // Lottery entries are claimable by multiple addresses...
     return false;
 }
 
