@@ -10,7 +10,7 @@ RUN_DAEMON=bitcoind -regtest -rpcallowip=::/0 -printtoconsole -server
 RUN_SHELL=bash
 
 build:
-	sudo docker build dockerfile/java" .
+	sudo docker build --no-cache -t lotteryapp .
 
 alice_rm:
 	-sudo docker rm -f alice
@@ -34,34 +34,34 @@ alice_daemon: alice_rm build
 	$(DOCKER_ALICE) -d=true $(RUN_DAEMON)
 
 alice_shell: alice_rm build
-	$(DOCKER_ALICE) -i lotteryapp
+	$(DOCKER_ALICE) -i lotteryapp bash
 
 bob_daemon: bob_rm build
 	$(DOCKER_BOB) -d=true $(RUN_DAEMON)
 
 bob_shell: bob_rm build
-	$(DOCKER_BOB) -i lotteryapp
+	$(DOCKER_BOB) -i lotteryapp bash
 
 charlie_daemon: charlie_rm build
 	$(DOCKER_CHARLIE) -d=true $(RUN_DAEMON)
 
 charlie_shell: charlie_rm build
-	$(DOCKER_CHARLIE) -i lotteryapp
+	$(DOCKER_CHARLIE) -i lotteryapp bash
 
 dave_daemon: dave_rm build
 	$(DOCKER_DAVE) -d=true $(RUN_DAEMON)
 
 dave_shell: dave_rm build
-	$(DOCKER_DAVE) -i lotteryapp
+	$(DOCKER_DAVE) -i lotteryapp bash
 
 eve_daemon: eve_rm build
 	$(DOCKER_EVE) -d=true $(RUN_DAEMON)
 
 eve_shell: eve_rm build
-	$(DOCKER_EVE) -i lotteryapp
+	$(DOCKER_EVE) -i lotteryapp bash
         
 mike_daemon: mike_rm build
 	$(DOCKER_MIKE) -d=true $(RUN_DAEMON)
 
 mike_shell: mike_rm build
-	$(DOCKER_MIKE) -i lotteryapp
+	$(DOCKER_MIKE) -i lotteryapp bash
