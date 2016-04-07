@@ -46,7 +46,7 @@ public class LotteryEntry {
     public static void main(String[] args) throws Exception {
         BriefLogFormatter.init();
         if (args.length < 1) {
-            System.err.println("Usage: LotteryEntry [regtest|testnet]");
+            System.err.println("Usage: LotteryEntry [regtest|testnet] [customPort?]");
             return;
         }
 
@@ -56,7 +56,10 @@ public class LotteryEntry {
             params = TestNet3Params.get();
             filePrefix = "lottery-entry-testnet";
         } else if (args[0].equals("regtest")) {
-            params = RegTestParams.get();
+            if (args.length == 2) 
+              params = RegTestParams.get(Integer.parseInt(args[1]));
+            else 
+              params = RegTestParams.get();
             filePrefix = "lottery-entry-regtest";
         } else {
             params = MainNetParams.get();
