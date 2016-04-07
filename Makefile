@@ -10,7 +10,7 @@ RUN_DAEMON=bitcoind -regtest -rpcallowip=::/0 -printtoconsole -server
 RUN_SHELL=bash
 
 build:
-	sudo docker build --no-cache -t lotteryapp .
+	sudo docker build -t lotteryapp .
 
 alice_rm:
 	-sudo docker rm -f alice

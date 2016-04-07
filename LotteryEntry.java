@@ -125,15 +125,15 @@ public class LotteryEntry {
             sendResult.broadcastComplete.addListener(new Runnable() {
                 @Override
                 public void run() {
-                    // The wallet has changed now, it'll get auto saved shortly or when the app shuts down.
                     System.out.println("Sent entry onwards! Transaction hash is " + sendResult.tx.getHashAsString());
-                    //sleep for 30 seconds
+                    //sleep for 15 seconds
                     try {
                       Thread.sleep(15000);
                     } catch (InterruptedException ignored) {}
 
 
                     for (TransactionOutput to : kit.wallet().calculateAllSpendCandidates(true, false)) {
+                      System.out.println("Spend Candidates:");
                       System.out.println("DBG***** " + to.getParentTransactionHash() + " " + to.getIndex());
                     }
                       
@@ -195,14 +195,14 @@ public class LotteryEntry {
             public void run() {
               System.out.println("Sent out claim! Claim Transaction hash is " + sendResult.tx.getHashAsString() + "\n\n\n\n\n");
               //sleep for 30 seconds
-              try {
+              /*try {
                 Thread.sleep(30000);
               } catch (InterruptedException ignored) {}
               System.out.println("Confidence: " + req.tx.getConfidence());
               for (Map.Entry<Sha256Hash, Integer> entry : req.tx.getAppearsInHashes().entrySet()) {
                 System.out.println("In block: " + entry.getKey() + " " + entry.getValue());
               }
-              System.out.println("\n\n\n\n");
+              System.out.println("\n\n\n\n");*/
             }
          }, MoreExecutors.sameThreadExecutor());
       }
