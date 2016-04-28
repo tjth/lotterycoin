@@ -23,13 +23,13 @@ do
   echo  "$com" > run_daemon.sh
   chmod +x run_daemon.sh
 
-  echo "$PREFIX/lotterycoin/src/bitcoin-cli -regtest -port=$port -rpcport=$rpcport -rpcuser=test -rpcpassword=test \$@" > bitcoin_command.sh
+  echo "$PREFIX/lotterycoin/src/bitcoin-cli -regtest -port=$port -rpcport=$rpcport -rpcuser=test -rpcpassword=test -whitelist=127.0.0.1 \$@" > bitcoin_command.sh
   chmod +x bitcoin_command.sh
 
   cd ../
-  cp slf4j-simple-1.7.16.jar bitcoinj-core-0.14-SNAPSHOT-bundled.jar LotteryEntry.java $NEWDIR
+  cp slf4j-simple-1.7.16.jar ~/bitcoinj-lotterycoin/core/target/bitcoinj-core-0.14-SNAPSHOT-bundled.jar LotteryEntry.java build_app.sh debug.sh $NEWDIR
   echo "$NEWDIR created."
 
-  echo `cat app_build.sh` "$port" > $NEWDIR/app_build.sh
-  chmod +x $NEWDIR/app_build.sh
+  echo `cat run_app.sh` "$port" > $NEWDIR/run_app.sh
+  chmod +x $NEWDIR/run_app.sh
 done

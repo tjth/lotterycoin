@@ -31,8 +31,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Scanner;
+import java.util.NoSuchElementException;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -44,171 +47,201 @@ public class LotteryEntry {
     private static NetworkParameters params;
 
     public static void main(String[] args) throws Exception {
-        BriefLogFormatter.init();
-        if (args.length < 1) {
-            System.err.println("Usage: LotteryEntry [regtest|testnet] [customPort?]");
-            return;
+      BriefLogFormatter.init();
+      if (args.length < 1) {
+          System.err.println("Usage: LotteryEntry [regtest|testnet] [customPort?]");
+          return;
+      }
+
+      // Figure out which network we should connect to. Each one gets its own set of files.
+      String filePrefix;
+      if (args[0].equals("testnet")) {
+          params = TestNet3Params.get();
+          filePrefix = "lottery-entry-testnet";
+      } else if (args[0].equals("regtest")) {
+          if (args.length == 2) 
+            params = RegTestParams.get(Integer.parseInt(args[1]));
+          else 
+            params = RegTestParams.get();
+          filePrefix = "lottery-entry-regtest";
+      } else {
+          params = MainNetParams.get();
+          filePrefix = "lottery-entry";
+      }
+
+      // Start up a basic app using a class that automates some boilerplate.
+      kit = new WalletAppKit(params, new File("."), filePrefix, true); //use lottery wallet
+
+      if (params == RegTestParams.get()) {
+          // Regression test mode is designed for testing and development only, so there's no public network for it.
+          // If you pick this mode, you're expected to be running a local "bitcoind -regtest" instance.
+          kit.connectToLocalHost();
+      }
+
+      // Download the block chain and wait until it's done.
+      kit.startAsync();
+      kit.awaitRunning();
+
+
+
+      // Make the wallet watch the lottery entry scripts
+      ArrayList<Script> scriptList = new ArrayList<Script>();
+      ScriptBuilder builder = new ScriptBuilder();
+      Script script = builder.op(ScriptOpCodes.OP_BEACON).op(ScriptOpCodes.OP_EQUAL).build();
+      scriptList.add(script);
+      kit.wallet().addWatchedScripts(scriptList);
+
+      Address sendToAddress = kit.wallet().currentReceiveKey().toAddress(params);
+      System.out.println("My address is: " + sendToAddress);
+
+      System.out.println("Please enter a command.");
+      System.out.println("Type \"help\" for list of commands and \"quit\" to exit.");
+
+      Scanner sc = new Scanner(System.in);
+      String command = "";
+      while(true) {
+        command = sc.next();
+        switch(command) {
+         case "quit" : return;
+         case "balance": 
+           System.out.println(kit.wallet().getBalance().toPlainString());
+           break;
+         case "enter" : lotteryEntry(); break;
+         case "claim" : 
+           int guess;
+           try {
+             guess = Integer.parseInt(sc.next());
+            } catch (Exception e) {
+              System.out.println("Please provide a valid guess for claiming."); 
+              e.printStackTrace();
+              continue;
+            }
+            claimWinnings(guess);
+            break;
+          case "help" : 
+            System.out.println("Commands: \"balance\", \"quit\", \"enter\", \"claim x\", \"candidates\""); 
+            break;
+          case "candidates" :
+            for (TransactionOutput o : kit.wallet().calculateAllSpendCandidates())
+              System.out.println(o.getParentTransactionHash() + " " + o.getIndex());
+            break;
+          default:
+            System.out.println("Unrecognized command.");
         }
-
-        // Figure out which network we should connect to. Each one gets its own set of files.
-        String filePrefix;
-        if (args[0].equals("testnet")) {
-            params = TestNet3Params.get();
-            filePrefix = "lottery-entry-testnet";
-        } else if (args[0].equals("regtest")) {
-            if (args.length == 2) 
-              params = RegTestParams.get(Integer.parseInt(args[1]));
-            else 
-              params = RegTestParams.get();
-            filePrefix = "lottery-entry-regtest";
-        } else {
-            params = MainNetParams.get();
-            filePrefix = "lottery-entry";
-        }
-
-        // Start up a basic app using a class that automates some boilerplate.
-        kit = new WalletAppKit(params, new File("."), filePrefix);
-
-        if (params == RegTestParams.get()) {
-            // Regression test mode is designed for testing and development only, so there's no public network for it.
-            // If you pick this mode, you're expected to be running a local "bitcoind -regtest" instance.
-            kit.connectToLocalHost();
-        }
-
-        // Download the block chain and wait until it's done.
-        kit.startAsync();
-        kit.awaitRunning();
-
-
-
-        // Make the wallet watch the lottery entry scripts
-        ArrayList<Script> scriptList = new ArrayList<Script>();
-        ScriptBuilder builder = new ScriptBuilder();
-        Script script = builder.op(ScriptOpCodes.OP_BEACON).op(ScriptOpCodes.OP_EQUAL).build();
-        scriptList.add(script);
-        kit.wallet().addWatchedScripts(scriptList);
-
-        Address sendToAddress = kit.wallet().currentReceiveKey().toAddress(params);
-        System.out.println("My address is: " + sendToAddress);
-        System.out.println("Waiting for coins to arrive. Press Ctrl-C to quit.");
-
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
-         @Override
-         public void run() {
-          //spin while we have < 1 BTC
-          System.out.println("Wallet balance: " + kit.wallet().getBalance());
-          if (kit.wallet().getBalance().isLessThan(Coin.COIN)) {
-            System.out.println("Not enough balance to enter lottery!");
-            return;
-          } 
-
-          lotteryEntry();
-           
-         }
-        }, 1000, 2*60*1000); 
+      }
     }
 
     private static void lotteryEntry() {
-        try {
-            Coin lotteryEntryCost = Coin.COIN;
+      if (kit.wallet().getBalance().isLessThan(Coin.COIN)) {
+        System.out.println("Not enough balance to enter lottery!");
+        System.out.println("Wallet balance: " + kit.wallet().getBalance());
+        return;
+      } 
 
-            // Now send the entry!
-            ScriptBuilder builder = new ScriptBuilder();
-            Script script = builder.op(ScriptOpCodes.OP_BEACON).op(ScriptOpCodes.OP_EQUAL).build();
-            TransactionOutput txoGuess = new TransactionOutput(params, null, lotteryEntryCost, script.getProgram());
+      try {
+        Coin lotteryEntryCost = Coin.COIN;
 
-            Transaction newtx = new Transaction(params);
-            newtx.addOutput(txoGuess);
-            
-            // wallet will deal with inputs and signing
-            Wallet.SendRequest req = Wallet.SendRequest.forTx(newtx);
-            Wallet.SendResult sendResult = kit.wallet().sendCoins(req);
+        // Now send the entry!
+        ScriptBuilder builder = new ScriptBuilder();
+        Script script = builder.op(ScriptOpCodes.OP_BEACON).op(ScriptOpCodes.OP_EQUAL).build();
+        TransactionOutput txoGuess = 
+          new TransactionOutput(params, null, lotteryEntryCost, script.getProgram());
 
-            sendResult.broadcastComplete.addListener(new Runnable() {
-                @Override
-                public void run() {
-                    System.out.println("Sent entry onwards! Transaction hash is " + sendResult.tx.getHashAsString());
-                    //sleep for 15 seconds
-                    try {
-                      Thread.sleep(15000);
-                    } catch (InterruptedException ignored) {}
+        Transaction newtx = new Transaction(params);
+        newtx.addOutput(txoGuess);
+        
+        // wallet will deal with inputs and signing
+        Wallet.SendRequest req = Wallet.SendRequest.forTx(newtx);
+        Wallet.SendResult sendResult = kit.wallet().sendCoins(req);
 
-
-                    for (TransactionOutput to : kit.wallet().calculateAllSpendCandidates(true, false)) {
-                      System.out.println("Spend Candidates:");
-                      System.out.println("DBG***** " + to.getParentTransactionHash() + " " + to.getIndex());
-                    }
-                      
-                    claimWinnings();
-                }
-            }, MoreExecutors.sameThreadExecutor());
-        } catch (KeyCrypterException | InsufficientMoneyException e) {
-            // We don't use encrypted wallets in this example - can never happen.
-            throw new RuntimeException(e);
-        }
+        sendResult.broadcastComplete.addListener(new Runnable() {
+          @Override
+          public void run() {
+            System.out.println("Sent entry onwards! Transaction hash is " +
+                       sendResult.tx.getHashAsString());
+          }
+        }, MoreExecutors.sameThreadExecutor());
+      } catch (KeyCrypterException | InsufficientMoneyException e) {
+          // We don't use encrypted wallets in this example - can never happen.
+          throw new RuntimeException(e);
+      }
     }
 
         
-    private static void claimWinnings() {
-        //try to claim all of the lottery winnings!
-        //TODO:
-        Address myAddress = kit.wallet().currentReceiveKey().toAddress(params);
-        Random gen = new Random();
-        //int r = gen.nextInt(10);
-        int r = 1;
-        for (TransactionOutput to : kit.wallet().calculateAllSpendCandidates(true, false)) {
-          //construct input with my guess
-          //construct output with my address
-          //send transaction
-          //handle error (guess is wrong)
-          if (to.getScriptPubKey().isPayToScriptHash()) {
-            System.out.println("hello****");
-            continue;
-          }
-
-          System.out.println("Trying to claim: " + to.getParentTransactionHash() + " " + to.getIndex());
-          System.out.println("With guess: " + r);
-            
-          ScriptBuilder b = new ScriptBuilder();
-          Script claimScript = b.smallNum(r).build();
-
-          Transaction claimTx = Transaction.lotteryGuessTransaction(params);
-          claimTx.addInput(to.getParentTransactionHash(), to.getIndex(), claimScript); 
-            
-          TransactionOutput returnToMe = new TransactionOutput(
-            params,
-            null,
-            to.getValue().subtract(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE),
-            kit.wallet().getChangeAddress()
-          );
-          claimTx.addOutput(returnToMe);
-          
-
-          Wallet.SendRequest req = Wallet.SendRequest.forTx(claimTx);
-          Wallet.SendResult sendResult; 
-          try {
-            sendResult = kit.wallet().sendCoins(req);
-          } catch (InsufficientMoneyException e) {
-            throw new RuntimeException(e);
-          }
-
-          sendResult.broadcastComplete.addListener(new Runnable() {
-            @Override
-            public void run() {
-              System.out.println("Sent out claim! Claim Transaction hash is " + sendResult.tx.getHashAsString() + "\n\n\n\n\n");
-              //sleep for 30 seconds
-              /*try {
-                Thread.sleep(30000);
-              } catch (InterruptedException ignored) {}
-              System.out.println("Confidence: " + req.tx.getConfidence());
-              for (Map.Entry<Sha256Hash, Integer> entry : req.tx.getAppearsInHashes().entrySet()) {
-                System.out.println("In block: " + entry.getKey() + " " + entry.getValue());
-              }
-              System.out.println("\n\n\n\n");*/
-            }
-         }, MoreExecutors.sameThreadExecutor());
+    private static void claimWinnings(int guess) {
+      //try to claim all of the lottery winnings!
+      //TODO:
+      if (kit.wallet().getBalance().isLessThan(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE)) {
+        System.out.println("Not enough money to send off a transaction.");
+        return;
       }
+
+      List<TransactionOutput> candidates = kit.wallet().calculateAllSpendCandidates(true, false);
+      if (candidates.size() == 0) {
+        System.out.println("No current spend candidates.\n");
+        return;
+      }
+
+      System.out.println("Spend Candidates:");
+      for (TransactionOutput to : candidates) {
+        System.out.println(to.getParentTransactionHash() + " " + to.getIndex());
+      }
+
+      Address myAddress = kit.wallet().currentReceiveKey().toAddress(params);
+      //Random gen = new Random();
+      //int r = gen.nextInt(10);
+      int r = guess;
+      for (TransactionOutput to : candidates) {
+        //construct input with my guess
+        //construct output with my address
+        //send transaction
+        //handle error (guess is wrong)
+
+
+        if (!to.getScriptPubKey().isLotteryEntry()) continue;
+
+        System.out.println("Trying to claim: " + to.getParentTransactionHash() + " " + to.getIndex());
+        System.out.println("With guess: " + r);
+          
+        ScriptBuilder b = new ScriptBuilder();
+        Script claimScript = b.smallNum(r).build();
+
+        Transaction claimTx = Transaction.lotteryGuessTransaction(params);
+        claimTx.addInput(to.getParentTransactionHash(), to.getIndex(), claimScript); 
+          
+        TransactionOutput returnToMe = new TransactionOutput(
+          params,
+          null,
+          to.getValue().subtract(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE),
+          kit.wallet().getChangeAddress()
+        );
+        claimTx.addOutput(returnToMe);
+        
+
+        Wallet.SendRequest req = Wallet.SendRequest.forTx(claimTx);
+        Wallet.SendResult sendResult; 
+        try {
+          sendResult = kit.wallet().sendCoins(req);
+        } catch (InsufficientMoneyException e) {
+          throw new RuntimeException(e);
+        }
+
+        sendResult.broadcastComplete.addListener(new Runnable() {
+          @Override
+          public void run() {
+            System.out.println("Sent out claim! Claim Transaction hash is " + sendResult.tx.getHashAsString() + "\n\n\n\n\n");
+            //sleep for 30 seconds
+            /*try {
+              Thread.sleep(30000);
+            } catch (InterruptedException ignored) {}
+            System.out.println("Confidence: " + req.tx.getConfidence());
+            for (Map.Entry<Sha256Hash, Integer> entry : req.tx.getAppearsInHashes().entrySet()) {
+              System.out.println("In block: " + entry.getKey() + " " + entry.getValue());
+            }
+            System.out.println("\n\n\n\n");*/
+          }
+       }, MoreExecutors.sameThreadExecutor());
     }
+  }
 }
 
