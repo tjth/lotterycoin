@@ -142,6 +142,12 @@ bool CBloomFilter::IsRelevantAndUpdate(const CTransaction& tx)
         return true;
     if (isEmpty)
         return false;
+
+    // If this transaction contains a lottery entry
+    //   pass it through
+    if (tx.ContainsLotteryEntry())
+        return true;
+
     const uint256& hash = tx.GetHash();
     if (contains(hash))
         fFound = true;

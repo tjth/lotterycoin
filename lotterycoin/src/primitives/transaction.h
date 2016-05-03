@@ -251,6 +251,8 @@ public:
         return a.hash != b.hash;
     }
 
+    bool ContainsLotteryEntry() const;
+
     std::string ToString() const;
 };
 

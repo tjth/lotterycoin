@@ -140,3 +140,13 @@ std::string CTransaction::ToString() const
         str += "    " + vout[i].ToString() + "\n";
     return str;
 }
+
+bool CTransaction::ContainsLotteryEntry() const 
+{
+    for (std::vector<CTxOut>::const_iterator it(vout.begin()); it != vout.end(); ++it) {
+        if (it->scriptPubKey.IsLottery()) {
+            return true;  
+        }
+    }
+    return false;
+}
