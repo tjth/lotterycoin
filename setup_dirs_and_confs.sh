@@ -17,7 +17,7 @@ do
 
   port=$((${i}+18445))
   rpcport=$((${i}+20222))
-  args="-printtoconsole -datadir=$PREFIX/$NEWDIR/data -regtest -daemon -printtoconsole -listen -port=$port -rpcport=$rpcport -rpcuser=test -rpcpassword=test"
+  args="-printtoconsole -datadir=$PREFIX/$NEWDIR/data -regtest -daemon -printtoconsole -listen -port=$port -rpcport=$rpcport -rpcuser=test -rpcpassword=test -acceptnonstdtxn"
   com="$PREFIX/lotterycoin/src/bitcoind $args"
   
   echo  "$com" > run_daemon.sh
