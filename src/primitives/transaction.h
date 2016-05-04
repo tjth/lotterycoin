@@ -252,6 +252,7 @@ public:
     }
 
     bool ContainsLotteryEntry() const;
+    bool ContainsLotteryClaim() const;
 
     std::string ToString() const;
 };

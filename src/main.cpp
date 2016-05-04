@@ -1648,7 +1648,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                     pvChecks->push_back(CScriptCheck());
                     check.swap(pvChecks->back());
                 } else if (!check()) {
-                    if (tx.vin[i].scriptSig.IsLottery()) {
+                    if (tx.vin[i].scriptSig.IsLotteryEntry()) {
                       // This is a lottery transaction with an incorrect guess
                       //TODO: can we just leave here?
                       LogPrintf("DBG: input %d is a lottery, skipping.\n");

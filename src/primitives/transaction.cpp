@@ -144,7 +144,17 @@ std::string CTransaction::ToString() const
 bool CTransaction::ContainsLotteryEntry() const 
 {
     for (std::vector<CTxOut>::const_iterator it(vout.begin()); it != vout.end(); ++it) {
-        if (it->scriptPubKey.IsLottery()) {
+        if (it->scriptPubKey.IsLotteryEntry()) {
+            return true;  
+        }
+    }
+    return false;
+}
+
+bool CTransaction::ContainsLotteryClaim() const 
+{
+    for (std::vector<CTxIn>::const_iterator it(vin.begin()); it != vin.end(); ++it) {
+        if (it->scriptSig.IsLotteryClaim()) {
             return true;  
         }
     }

@@ -92,7 +92,7 @@ bool IsStandardTx(const CTransaction& tx, std::string& reason)
     unsigned int nDataOut = 0;
     txnouttype whichType;
     BOOST_FOREACH(const CTxOut& txout, tx.vout) {
-        if (txout.scriptPubKey.IsLottery()) {
+        if (txout.scriptPubKey.IsLotteryEntry()) {
           LogPrintf("DEBUG: transaction is lottery");
           continue;
         }

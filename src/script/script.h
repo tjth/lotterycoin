@@ -603,8 +603,11 @@ public:
     bool IsPushOnly(const_iterator pc) const;
     bool IsPushOnly() const;
 
-    bool IsLottery(const_iterator pc) const;
-    bool IsLottery() const;
+    bool IsLotteryEntry(const_iterator pc) const;
+    bool IsLotteryEntry() const;
+
+    bool IsLotteryClaim(const_iterator pc) const;
+    bool IsLotteryClaim() const;
 
     /**
      * Returns whether the script is guaranteed to fail at execution,

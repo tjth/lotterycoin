@@ -211,7 +211,7 @@ bool CScript::IsPayToScriptHash() const
 }
 
 //TODO: remove comments when we have a hash op
-bool CScript::IsLottery(const_iterator pc) const
+bool CScript::IsLotteryEntry(const_iterator pc) const
 {
   bool hasBeacon = false;
   //bool hasHash = false;
@@ -231,9 +231,46 @@ bool CScript::IsLottery(const_iterator pc) const
   return hasBeacon /*&& hasHash*/;
 } 
 
-bool CScript::IsLottery() const
+bool CScript::IsLotteryEntry() const
 {
-    return this->IsLottery(begin());
+    return this->IsLotteryEntry(begin());
+}
+
+bool CScript::IsLotteryClaim(const_iterator pc) const
+{
+  //currently the format is 
+  // OP_X OP_EQUAL
+  //TODO: change to final version
+
+  opcodetype opcode;
+  if (!GetOp(pc, opcode))
+    return false;
+
+  if (!(opcode == OP_1 ||
+        opcode == OP_2 ||
+        opcode == OP_3 ||
+        opcode == OP_4 ||
+        opcode == OP_5 ||
+        opcode == OP_6 ||
+        opcode == OP_7 ||
+        opcode == OP_8 ||
+        opcode == OP_9 ||
+        opcode == OP_10)) {
+    return false;
+  }
+  
+  if (!GetOp(pc, opcode))
+    return false;
+
+  if (opcode == OP_EQUAL)
+    return true;
+
+  return false;
+} 
+
+bool CScript::IsLotteryClaim() const
+{
+    return this->IsLotteryClaim(begin());
 }
 
 bool CScript::IsPushOnly(const_iterator pc) const
