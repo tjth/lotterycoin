@@ -87,13 +87,18 @@ bool IsStandardTx(const CTransaction& tx, std::string& reason)
             reason = "scriptsig-not-pushonly";
             return false;
         }
+      
+        if (txin.scriptSig.IsLotteryClaim()) {
+          LogPrintf("DEBUG: transaction is lottery claim.");
+          continue;
+        }
     }
 
     unsigned int nDataOut = 0;
     txnouttype whichType;
     BOOST_FOREACH(const CTxOut& txout, tx.vout) {
         if (txout.scriptPubKey.IsLotteryEntry()) {
-          LogPrintf("DEBUG: transaction is lottery");
+          LogPrintf("DEBUG: transaction is lottery entry.");
           continue;
         }
 

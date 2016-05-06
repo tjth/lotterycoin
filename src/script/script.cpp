@@ -259,13 +259,7 @@ bool CScript::IsLotteryClaim(const_iterator pc) const
     return false;
   }
   
-  if (!GetOp(pc, opcode))
-    return false;
-
-  if (opcode == OP_EQUAL)
-    return true;
-
-  return false;
+  return true;  
 } 
 
 bool CScript::IsLotteryClaim() const
