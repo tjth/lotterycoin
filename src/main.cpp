@@ -1666,6 +1666,14 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                         if (check2())
                             return state.Invalid(false, REJECT_NONSTANDARD, strprintf("non-mandatory-script-verify-flag (%s)", ScriptErrorString(check.GetScriptError())));
                     }
+                    
+                    // If the script failed because of an incorrect lottery claim,
+                    // we just mark the transaction as invalid, but do not DoS ban
+                    // the node as we are to expect incorrect claims
+                    if (check.GetScriptError() == SCRIPT_ERR_EVAL_FALSE_LOTTERY_CLAIM)
+                        return state.Invalid(false, REJECT_INVALID, strprintf("lottery-claim-failure (%s)", ScriptErrorString(check.GetScriptError())));
+
+
                     // Failures of other flags indicate a transaction that is
                     // invalid in new blocks, e.g. a invalid P2SH. We DoS ban
                     // such nodes as they are not following the protocol. That

@@ -246,7 +246,7 @@ bool CScript::IsLotteryClaim(const_iterator pc) const
   if (!GetOp(pc, opcode))
     return false;
 
-  if (!(opcode == OP_1 ||
+  return (opcode == OP_1 ||
         opcode == OP_2 ||
         opcode == OP_3 ||
         opcode == OP_4 ||
@@ -255,11 +255,7 @@ bool CScript::IsLotteryClaim(const_iterator pc) const
         opcode == OP_7 ||
         opcode == OP_8 ||
         opcode == OP_9 ||
-        opcode == OP_10)) {
-    return false;
-  }
-  
-  return true;  
+        opcode == OP_10);
 } 
 
 bool CScript::IsLotteryClaim() const

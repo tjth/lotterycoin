@@ -11,6 +11,7 @@ typedef enum ScriptError_t
     SCRIPT_ERR_OK = 0,
     SCRIPT_ERR_UNKNOWN_ERROR,
     SCRIPT_ERR_EVAL_FALSE,
+    SCRIPT_ERR_EVAL_FALSE_LOTTERY_CLAIM,
     SCRIPT_ERR_OP_RETURN,
 
     /* Max sizes */

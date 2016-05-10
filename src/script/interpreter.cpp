@@ -392,7 +392,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                   //TODO: hash based on params
                   //int num = rand() % 10;
                   int num = 1;
-                  LogPrintf("DEBUG BEACON: pushing random: %d", num);
+                  LogPrintf("DEBUG BEACON: pushing random: %d\n", num);
                   
                   CScriptNum r(num);
                   stack.push_back(r.getvch());
@@ -1203,8 +1203,11 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, unsigne
         return false;
     if (stack.empty())
         return set_error(serror, SCRIPT_ERR_EVAL_FALSE);
-    if (CastToBool(stack.back()) == false)
+    if (CastToBool(stack.back()) == false) {
+        if (scriptSig.IsLotteryClaim() && scriptPubKey.IsLotteryEntry())
+            return set_error(serror, SCRIPT_ERR_EVAL_FALSE_LOTTERY_CLAIM);
         return set_error(serror, SCRIPT_ERR_EVAL_FALSE);
+    }
 
     // Additional validation for spend-to-script-hash transactions:
     if ((flags & SCRIPT_VERIFY_P2SH) && scriptPubKey.IsPayToScriptHash())
