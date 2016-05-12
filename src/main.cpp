@@ -91,6 +91,16 @@ map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_main);
 map<uint256, set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_main);
 void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
+
+/** 
+ * Maps for validating lottery entries and claims
+ *  (1) Claimers: map from pubkey to hash of the txout they have claimed
+ *  (2) Participants: set of pubkeys of those that have entered the lottery
+ */
+unordered_multimap<,uint25> mapLotteryClaimers GUARDED_BY(cs_main);
+unordered_set<> setLotteryParticipants GUARDED_BY(cs_main);
+
+
 /**
  * Returns true if there are nRequired or more blocks of minVersion or above
  * in the last Consensus::Params::nMajorityWindow blocks, starting at pstart and going backwards.
@@ -1556,6 +1566,24 @@ void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCach
 }
 
 bool CScriptCheck::operator()() {
+    bool lotteryChecks = scriptPubKey.isLotteryClaim() && 
+                         ptxo->vin[nIn].scriptSig.isLotteryEntry();
+
+    if (lotteryChecks) {
+      //TODO:
+      // - get pubkey and txoHash
+      if (hasAlreadyClaimed(pubKey, txoHash)) {
+
+          return false;
+      }
+
+      if (!hasAlreadyEntered(pubKey)) {
+
+          return false;
+      }
+    }
+
+  
     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;
     if (!VerifyScript(scriptSig, scriptPubKey, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, cacheStore), &error)) {
         return false;
@@ -1615,6 +1643,25 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
     return true;
 }
 }// namespace Consensus
+
+void clearLotteryEntriesAndClaims() {
+   setLotteryParticipants.clear(); 
+   mapLotteryClaimers.clear();
+}
+
+bool hasAlreadyEntered( pubKey) {
+    return setLotteryParticipants.find(pubKey) != setLotteryParticipants.end();
+}
+
+bool hasAlreadyClaimed( pubKey, unit256 txoHash) {
+    pair<multimap< , uint256>::iterator, multimap< , uint256>::iterator> ret; 
+    ret = mapLotteryClaimers.equal_range(pubKey);
+    for (multimap< , uint256>::iterator it = ret.first; it != ret.second; ++it) {
+        if (it->second == txoHash) return true;
+    }
+
+    return false;
+}
 
 bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks)
 {
