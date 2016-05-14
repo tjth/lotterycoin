@@ -210,25 +210,68 @@ bool CScript::IsPayToScriptHash() const
             (*this)[22] == OP_EQUAL);
 }
 
-//TODO: remove comments when we have a hash op
+//TODO: change when we have a hash op
 bool CScript::IsLotteryEntry(const_iterator pc) const
 {
-  bool hasBeacon = false;
-  //bool hasHash = false;
-  while (pc < end())
-  {
-    opcodetype opcode;
-    if (!GetOp(pc, opcode))
-      return false;
+  opcodetype opcode;
+  if (!GetOp(pc, opcode))
+    return false;
 
-    if (opcode == OP_BEACON) 
-      hasBeacon = true;
+  if (opcode != OP_IF) return false;
 
-    //if (opcode == OP_FLEXIHASH)
-      //hasHash = true; 
+  while (GetOp(pc, opcode)) {
+    if (opcode == OP_CHECKLOCKTIMEVERIFY) break;
   }
 
-  return hasBeacon /*&& hasHash*/;
+  if (!GetOp(pc, opcode))
+    return false;
+  if (opcode != OP_DROP) return false;
+
+  if (!GetOp(pc, opcode))
+    return false;
+  if (opcode != OP_BEACON) return false;
+
+  if (!GetOp(pc, opcode))
+    return false;
+  if (opcode != OP_EQUAL) return false;
+
+  if (!GetOp(pc, opcode))
+    return false;
+  if (opcode != OP_ELSE) return false;
+
+  while (GetOp(pc, opcode)) {
+    if (opcode == OP_CHECKLOCKTIMEVERIFY) break;
+  }
+
+  if (!GetOp(pc, opcode))
+    return false;
+  if (opcode != OP_DROP) return false;
+
+  //now we are at the pay to rollover pub key hash bit
+  if (!GetOp(pc, opcode))
+    return false;
+  if (opcode != OP_DUP) return false;
+
+  if (!GetOp(pc, opcode))
+    return false;
+  if (opcode != OP_HASH160) return false;
+
+  //note we don't test the exact pubkey we are paying to
+
+  while (GetOp(pc, opcode)) {
+    if (opcode == OP_EQUALVERIFY) break;
+  }
+
+  if (!GetOp(pc, opcode))
+    return false;
+  if (opcode != OP_CHECKSIG) return false;
+
+  if (!GetOp(pc, opcode))
+    return false;
+  if (opcode != OP_ENDIF) return false;
+
+  return true;
+
 } 
 
 bool CScript::IsLotteryEntry() const
@@ -239,14 +282,14 @@ bool CScript::IsLotteryEntry() const
 bool CScript::IsLotteryClaim(const_iterator pc) const
 {
   //currently the format is 
-  // OP_X OP_EQUAL
+  // OP_X OP_1
   //TODO: change to final version
 
   opcodetype opcode;
   if (!GetOp(pc, opcode))
     return false;
 
-  return (opcode == OP_1 ||
+  if (!(opcode == OP_1 ||
         opcode == OP_2 ||
         opcode == OP_3 ||
         opcode == OP_4 ||
@@ -255,7 +298,12 @@ bool CScript::IsLotteryClaim(const_iterator pc) const
         opcode == OP_7 ||
         opcode == OP_8 ||
         opcode == OP_9 ||
-        opcode == OP_10);
+        opcode == OP_10)) return false;
+
+  if (!GetOp(pc, opcode))
+    return false;
+
+  return opcode == OP_1;
 } 
 
 bool CScript::IsLotteryClaim() const

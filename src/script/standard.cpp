@@ -285,3 +285,32 @@ CScript GetScriptForMultisig(int nRequired, const std::vector<CPubKey>& keys)
     script << CScript::EncodeOP_N(keys.size()) << OP_CHECKMULTISIG;
     return script;
 }
+
+CScript GetScriptForLotteryEntry() 
+{
+    CScript script;
+
+    script << OP_IF;
+    CScriptNum num1(100);
+    script << num1;
+    script << OP_CHECKLOCKTIMEVERIFY << OP_DROP << OP_BEACON << OP_EQUAL;
+
+    script << OP_ELSE;
+
+    CScriptNum num2(102);
+    script << num2;
+    script << OP_CHECKLOCKTIMEVERIFY << OP_DROP;
+    script << OP_DUP << OP_HASH160 << OP_PUBKEYHASH << OP_EQUALVERIFY << OP_CHECKSIG;
+
+    script << OP_ENDIF;
+    return script;
+}
+
+CScript GetExampleScriptForLotteryClaim() 
+{
+    CScript script;
+
+    script << CScript::EncodeOP_N(4);
+    script << CScript::EncodeOP_N(1);
+    return script;
+}

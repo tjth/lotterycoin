@@ -1013,4 +1013,17 @@ BOOST_AUTO_TEST_CASE(script_GetScriptAsm)
     BOOST_CHECK_EQUAL(derSig + "83 " + pubKey, ScriptToAsmStr(CScript() << ToByteVector(ParseHex(derSig + "83")) << vchPubKey));
 }
 
+BOOST_AUTO_TEST_CASE(script_IsLotteryEntry_on_valid_scripts)
+{
+    CScript script = GetScriptForLotteryEntry();
+    BOOST_CHECK(script.IsLotteryEntry());
+}
+
+BOOST_AUTO_TEST_CASE(script_IsLotteryClaim_on_valid_scripts)
+{
+    CScript script = GetExampleScriptForLotteryClaim();
+    BOOST_CHECK(script.IsLotteryClaim());
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()
