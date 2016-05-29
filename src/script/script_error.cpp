@@ -15,6 +15,10 @@ const char* ScriptErrorString(const ScriptError serror)
             return "Script evaluated without error but finished with a false/empty top stack element";
         case SCRIPT_ERR_EVAL_FALSE_LOTTERY_CLAIM:
             return "Lottery claim script finished with a false top stack element - incorrect claim";
+        case SCRIPT_ERR_ALREADY_CLAIMED:
+            return "This pubkey has already claimed for this lottery entry";
+        case SCRIPT_ERR_NOT_ENTERED:
+            return "This pubkey has not yet entered the lottery so cannot claim";
         case SCRIPT_ERR_VERIFY:
             return "Script failed an OP_VERIFY operation";
         case SCRIPT_ERR_EQUALVERIFY:
