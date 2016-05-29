@@ -91,6 +91,14 @@ map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_main);
 map<uint256, set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_main);
 void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
+/** 
+ * Map for validating lottery entries and claims
+ *  Participants: set of pubkeys of those that have entered the lottery
+ *    and how many times they have entered
+ */
+unordered_map<, unit8_t> setLotteryParticipants GUARDED_BY(cs_main);
+
+
 /**
  * Returns true if there are nRequired or more blocks of minVersion or above
  * in the last Consensus::Params::nMajorityWindow blocks, starting at pstart and going backwards.
@@ -1556,6 +1564,20 @@ void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCach
 }
 
 bool CScriptCheck::operator()() {
+    bool lotteryChecks = scriptPubKey.isLotteryClaim() && 
+                         ptxo->vin[nIn].scriptSig.isLotteryEntry();
+
+    if (lotteryChecks) {
+      //TODO:
+      // - get pubkey and txoHash
+
+      if (!hasAlreadyEntered(pubKey)) {
+
+          return false;
+      }
+    }
+
+  
     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;
     if (!VerifyScript(scriptSig, scriptPubKey, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, cacheStore), &error)) {
         return false;
@@ -1616,6 +1638,15 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
 }
 }// namespace Consensus
 
+void clearLotteryEntriesAndClaims() {
+   setLotteryParticipants.clear(); 
+   mapLotteryClaimers.clear();
+}
+
+bool hasAlreadyEntered( pubKey) {
+    return mapLotteryParticipants.find(pubKey) != setLotteryParticipants.end();
+}
+
 bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks)
 {
     if (!tx.IsCoinBase())
@@ -1648,12 +1679,12 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                     pvChecks->push_back(CScriptCheck());
                     check.swap(pvChecks->back());
                 } else if (!check()) {
-                    if (tx.vin[i].scriptSig.IsLotteryEntry()) {
-                      // This is a lottery transaction with an incorrect guess
-                      //TODO: can we just leave here?
+                    if (tx.vin[i].scriptSig.IsLotteryClaim()) {
+                      // This is a lottery transaction with incorrect 
                       LogPrintf("DBG: input %d is a lottery, skipping.\n");
                       continue;
                     }
+
                     if (flags & STANDARD_NOT_MANDATORY_VERIFY_FLAGS) {
                         // Check whether the failure was caused by a
                         // non-mandatory script verification check, such as
