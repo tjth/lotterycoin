@@ -376,7 +376,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                 case OP_BEACON:
                 {
                   LogPrintf("ENTERING BEACON INTERPRETING\n");
-                  /*if (stack.size() < 3)
+                  if (stack.size() < 3)
                     return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
                    
                   //bits to push back, start and end blocks to compute hash of 
@@ -388,16 +388,17 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                   popstack(stack);
                   popstack(stack);
                   popstack(stack);
-                  */
-                  //TODO: hash based on params
-                  //int num = rand() % 10;
-                  int num = 1;
+
+                  //TODO: hash the block headers
+                  //TODO: create the hash by restricting bits and push
+                  break;
+                  /*int num = 1;
                   LogPrintf("DEBUG BEACON: pushing random: %d\n", num);
                   
                   CScriptNum r(num);
                   stack.push_back(r.getvch());
                   
-                  break;
+                  break;*/
                 }
 
                 case OP_NOP1: case OP_NOP5: case OP_NOP6: case OP_NOP7: 
