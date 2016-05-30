@@ -375,11 +375,11 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
 
                 case OP_BEACON:
                 {
-                  LogPrintf("ENTERING BEACON INTERPRETING\n");
+                  LogPrintf("\nENTERING BEACON INTERPRETING\n");
                   if (stack.size() < 3)
                     return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
                    
-                  //bits to push back, start and end blocks to compute hash of 
+                  //bits to push back (1 byte), start and end blocks to compute hash of (4 bytes) 
                   valtype bits = stacktop(-1);
                   valtype endBlock = stacktop(-2);
                   valtype startBlock = stacktop(-3);
@@ -389,16 +389,48 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                   popstack(stack);
                   popstack(stack);
 
+                  CScriptNum bitsNum(bits, false);
+                  CScriptNum startBlockNum(startBlock, false);
+                  CScriptNum endBlockNum(endBlock, false);
+                  LogPrintf("\nBEACON: seen bits=%d, startBlock=%d, endBlock=%d\n", 
+                    bitsNum.getint(), startBlockNum.getint(), endBlockNum.getint());
+
                   //TODO: hash the block headers
-                  //TODO: create the hash by restricting bits and push
+                  valtype blockHash;
+
+
+                  //create the hash by restricting bits and push
+                  valtype target = extractBitsNeeded(bitsNum.getint(), blockHash);
+                  stack.push_back(target);
                   break;
-                  /*int num = 1;
-                  LogPrintf("DEBUG BEACON: pushing random: %d\n", num);
-                  
-                  CScriptNum r(num);
-                  stack.push_back(r.getvch());
-                  
-                  break;*/
+                }
+
+                case OP_FLEXIHASH:
+                {
+                  if (stack.size() < 2)
+                    return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+                  // bits of randomness to produce (1 byte), the actual guess (//TODO
+                  valtype bits = stacktop(-1);
+                  valtype guess = stacktop(-2);
+
+                  // clean up top 2 stack items
+                  popstack(stack);
+                  popstack(stack);
+                    
+                  // use SHA256 hash on guess
+                  valtype guessFullHash(32);
+                  CHash256().Write(begin_ptr(guess), guess.size()).Finalize(begin_ptr(guessFullHash));
+
+                  // we now have a 4byte vector holding the hash of the guess
+
+                  //shift the guessHash down to required number of bits
+                  CScriptNum bitsNum(bits, false);
+                  LogPrintf("\nFLEXIHASH: seen bit = %d\n", bitsNum.getint());
+                  valtype guessShortenedHash = extractBitsNeeded(bitsNum.getint(), guessFullHash);
+
+                  stack.push_back(guessShortenedHash);
+                  break;
                 }
 
                 case OP_NOP1: case OP_NOP5: case OP_NOP6: case OP_NOP7: 
@@ -996,6 +1028,12 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
         return set_error(serror, SCRIPT_ERR_UNBALANCED_CONDITIONAL);
 
     return set_success(serror);
+}
+
+valtype extractBitsNeeded(int bitsOfRandomness, valtype currentHash)
+{
+  //TODO:
+  return vector<unsigned char>(); 
 }
 
 namespace {
