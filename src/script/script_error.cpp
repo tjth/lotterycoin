@@ -15,6 +15,8 @@ const char* ScriptErrorString(const ScriptError serror)
             return "Script evaluated without error but finished with a false/empty top stack element";
         case SCRIPT_ERR_EVAL_FALSE_LOTTERY_CLAIM:
             return "Lottery claim script finished with a false top stack element - incorrect claim";
+        case SCRIPT_ERR_BEACON_BLOCK_RANGE:
+            return "This miner cannot produce beacon based on supplied block range - not enough blocks";
         case SCRIPT_ERR_VERIFY:
             return "Script failed an OP_VERIFY operation";
         case SCRIPT_ERR_EQUALVERIFY:

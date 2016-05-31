@@ -92,6 +92,13 @@ public:
     {
         s.read((char*)data, sizeof(data));
     }
+
+    std::vector<unsigned char> ToByteVector()
+    {
+        std::vector<unsigned char> vch;
+        for (unsigned int i = 0; i < size(); i++) vch[i] = data[i];
+        return vch;
+    }
 };
 
 /** 160-bit opaque blob.

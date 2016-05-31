@@ -229,7 +229,13 @@ bool static CheckMinimalPush(const valtype& data, opcodetype opcode) {
     return true;
 }
 
-bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)
+bool EvalScript(
+    vector<vector<unsigned char> >& stack,
+    const CScript& script, unsigned int flags,
+    const BaseSignatureChecker& checker,
+    ScriptError* serror,
+    CChain *chain
+    )
 {
     static const CScriptNum bnZero(0);
     static const CScriptNum bnOne(1);
@@ -375,9 +381,13 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
 
                 case OP_BEACON:
                 {
-                  LogPrintf("\nENTERING BEACON INTERPRETING\n");
                   if (stack.size() < 3)
                     return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+                  if (NULL == chain) {
+                    LogPrintf("chain is null!!!");
+                    return set_error(serror, SCRIPT_ERR_BEACON_BLOCK_RANGE);
+                  }
                    
                   //bits to push back (1 byte), start and end blocks to compute hash of (4 bytes) 
                   valtype bits = stacktop(-1);
@@ -395,14 +405,39 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                   LogPrintf("\nBEACON: seen bits=%d, startBlock=%d, endBlock=%d\n", 
                     bitsNum.getint(), startBlockNum.getint(), endBlockNum.getint());
 
-                  //TODO: hash the block headers
-                  valtype blockHash;
+                  valtype finalHash;
+                  valtype temp;
+
+                  //for each block index in our range..
+                  for (int i = startBlockNum.getint(); i <= endBlockNum.getint(); i++) {
+                    CBlockIndex *blockIndex = (*chain)[i];
+
+                    //return error if out of range
+                    if (NULL == blockIndex) return set_error(serror, SCRIPT_ERR_BEACON_BLOCK_RANGE);
+
+                    //get the block's hash
+                    uint256 blockHash = blockIndex->GetBlockHash();
+
+                    //convert hash into valtype
+                    valtype blockHashValtype = blockHash.ToByteVector();
+
+                    //append current hash and this block's hash to temporary valtype
+                    temp.insert(temp.begin(), finalHash.begin(), finalHash.end());
+                    temp.insert(temp.end(), blockHashValtype.begin(), blockHashValtype.end());
+                    finalHash.clear();
+
+                    //sha256 hash
+                    CHash256().Write(begin_ptr(temp), temp.size()).Finalize(begin_ptr(finalHash));
+                    temp.clear();
+                  }
+
+                
                   LogPrintf("Block hash bytes:\n");
-                  printValtype(blockHash);
+                  printValtype(finalHash);
 
 
                   //create the hash by restricting bits and push
-                  valtype target = extractBitsNeeded(bitsNum.getint(), blockHash);
+                  valtype target = extractBitsNeeded(bitsNum.getint(), finalHash);
                   LogPrintf("target hash bytes:\n");
                   printValtype(target);
                   stack.push_back(target);
@@ -414,7 +449,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                   if (stack.size() < 2)
                     return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
 
-                  // bits of randomness to produce (1 byte), the actual guess (//TODO
+                  // bits of randomness to produce, the actual guess
                   valtype bits = stacktop(-1);
                   valtype guess = stacktop(-2);
                   LogPrintf("Guess bytes:\n");
@@ -1045,8 +1080,31 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
 
 valtype extractBitsNeeded(int bitsOfRandomness, valtype currentHash)
 {
-  //TODO:
-  return vector<unsigned char>(); 
+  int length = currentHash.size();
+  int BITS_IN_BYTE = 8;
+
+  //how many unsigned chars do we need to look at
+  int index = bitsOfRandomness / BITS_IN_BYTE;
+
+  //if more than we've got, just return what we have
+  if (index > length) return currentHash;
+
+  valtype ret;
+
+  //copy in the full unsigned chars that we want
+  for (int i = 0; i < index; i++) {
+    ret[i] = currentHash[i];
+  }
+
+  //get the amount of bits we need from the top
+  unsigned char topChar = currentHash[index];
+  int bitsFromTop = bitsOfRandomness % BITS_IN_BYTE;
+
+  //extract these bits
+  unsigned char extracted = topChar & ((1 << bitsFromTop) - 1);
+
+  ret[index] = extracted;
+  return ret;
 }
 
 void printValtype(valtype vch) {
@@ -1244,7 +1302,14 @@ bool TransactionSignatureChecker::CheckLockTime(const CScriptNum& nLockTime) con
 }
 
 
-bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)
+bool VerifyScript(
+    const CScript& scriptSig, 
+    const CScript& scriptPubKey, 
+    unsigned int flags, 
+    const BaseSignatureChecker& checker, 
+    ScriptError* serror,
+    CChain *chain
+    )
 {
     set_error(serror, SCRIPT_ERR_UNKNOWN_ERROR);
 
@@ -1253,7 +1318,7 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, unsigne
     }
 
     vector<vector<unsigned char> > stack, stackCopy;
-    if (!EvalScript(stack, scriptSig, flags, checker, serror))
+    if (!EvalScript(stack, scriptSig, flags, checker, serror, chain))
         // serror is set
         return false;
     if (flags & SCRIPT_VERIFY_P2SH)
