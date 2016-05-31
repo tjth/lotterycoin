@@ -210,10 +210,10 @@ bool CScript::IsPayToScriptHash() const
             (*this)[22] == OP_EQUAL);
 }
 
-//TODO: change when we have a hash op
 bool CScript::IsLotteryEntry(const_iterator pc) const
 {
   opcodetype opcode;
+
   if (!GetOp(pc, opcode))
     return false;
 
@@ -281,30 +281,24 @@ bool CScript::IsLotteryEntry() const
 
 bool CScript::IsLotteryClaim(const_iterator pc) const
 {
-  //currently the format is 
-  // OP_X OP_1
-  //TODO: change to final version
+  //FORMAT:
+  // <claim> <bits> FLEXIHASH <bits>
+  // <endblock> <startblock> OP_1
 
-  opcodetype opcode;
-  if (!GetOp(pc, opcode))
-    return false;
+  return Find(OP_FLEXIHASH) == 1;
 
-  if (!(opcode == OP_1 ||
-        opcode == OP_2 ||
-        opcode == OP_3 ||
-        opcode == OP_4 ||
-        opcode == OP_5 ||
-        opcode == OP_6 ||
-        opcode == OP_7 ||
-        opcode == OP_8 ||
-        opcode == OP_9 ||
-        opcode == OP_10)) return false;
+  //TODO: fix this
+  /*opcodetype opcode;
 
-  if (!GetOp(pc, opcode))
-    return false;
+  while(GetOp(pc, opcode)) {
+    if (opcode == OP_FLEXIHASH) break;
+  }
+  if (opcode != OP_FLEXIHASH) return false;
 
-  return opcode == OP_1;
-} 
+  while (GetOp(pc, opcode));
+
+  return opcode == OP_1;*/
+}
 
 bool CScript::IsLotteryClaim() const
 {
@@ -331,4 +325,13 @@ bool CScript::IsPushOnly(const_iterator pc) const
 bool CScript::IsPushOnly() const
 {
     return this->IsPushOnly(begin());
+}
+
+void CScript::printScript() const
+{
+  opcodetype opcode;
+  for (const_iterator pc2 = begin(); pc2 != end() && GetOp(pc2, opcode);) {
+    cout << GetOpName(opcode) << " ";
+  }
+  cout << endl;
 }

@@ -303,6 +303,7 @@ CScript GetScriptForLotteryEntry()
     script << OP_DUP << OP_HASH160 << OP_PUBKEYHASH << OP_EQUALVERIFY << OP_CHECKSIG;
 
     script << OP_ENDIF;
+
     return script;
 }
 
@@ -310,7 +311,15 @@ CScript GetExampleScriptForLotteryClaim()
 {
     CScript script;
 
-    script << CScript::EncodeOP_N(4);
-    script << CScript::EncodeOP_N(1);
+    CScriptNum bits(6);
+    CScriptNum claim(134);
+    CScriptNum startBlock(10);
+    CScriptNum endBlock(13);
+
+    script << claim << bits << OP_FLEXIHASH << bits;
+    script << endBlock << startBlock;
+
+    script << CScript::EncodeOP_N(1); 
+
     return script;
 }

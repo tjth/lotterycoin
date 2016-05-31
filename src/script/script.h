@@ -610,6 +610,8 @@ public:
     bool IsLotteryClaim(const_iterator pc) const;
     bool IsLotteryClaim() const;
 
+    void printScript() const;
+
     /**
      * Returns whether the script is guaranteed to fail at execution,
      * regardless of the initial stack. This allows outputs to be pruned

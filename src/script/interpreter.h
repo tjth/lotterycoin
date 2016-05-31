@@ -129,6 +129,7 @@ public:
 
 bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* error = NULL);
 std::vector<unsigned char> extractBitsNeeded(int bitsOfRandomness, std::vector<unsigned char> currentHash);
+void printValtype(std::vector<unsigned char> vch);
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* error = NULL);
 
 #endif // BITCOIN_SCRIPT_INTERPRETER_H

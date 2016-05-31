@@ -397,10 +397,14 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
 
                   //TODO: hash the block headers
                   valtype blockHash;
+                  LogPrintf("Block hash bytes:\n");
+                  printValtype(blockHash);
 
 
                   //create the hash by restricting bits and push
                   valtype target = extractBitsNeeded(bitsNum.getint(), blockHash);
+                  LogPrintf("target hash bytes:\n");
+                  printValtype(target);
                   stack.push_back(target);
                   break;
                 }
@@ -413,6 +417,11 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                   // bits of randomness to produce (1 byte), the actual guess (//TODO
                   valtype bits = stacktop(-1);
                   valtype guess = stacktop(-2);
+                  LogPrintf("Guess bytes:\n");
+                  printValtype(guess);
+                  LogPrintf("Bits bytes:\n");
+                  printValtype(bits);
+                  break;
 
                   // clean up top 2 stack items
                   popstack(stack);
@@ -421,6 +430,8 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                   // use SHA256 hash on guess
                   valtype guessFullHash(32);
                   CHash256().Write(begin_ptr(guess), guess.size()).Finalize(begin_ptr(guessFullHash));
+                  LogPrintf("Guess hash bytes:\n");
+                  printValtype(guessFullHash);
 
                   // we now have a 4byte vector holding the hash of the guess
 
@@ -428,6 +439,8 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                   CScriptNum bitsNum(bits, false);
                   LogPrintf("\nFLEXIHASH: seen bit = %d\n", bitsNum.getint());
                   valtype guessShortenedHash = extractBitsNeeded(bitsNum.getint(), guessFullHash);
+                  LogPrintf("Shortened hash bytes:\n");
+                  printValtype(guessShortenedHash);
 
                   stack.push_back(guessShortenedHash);
                   break;
@@ -1034,6 +1047,14 @@ valtype extractBitsNeeded(int bitsOfRandomness, valtype currentHash)
 {
   //TODO:
   return vector<unsigned char>(); 
+}
+
+void printValtype(valtype vch) {
+  //prints in normal binary form i.e. msb on the left
+  for (unsigned int i = 0; i != vch.size(); i++) {
+    LogPrintf("%x", vch[i]);
+  }
+  LogPrintf("\n\n");
 }
 
 namespace {
