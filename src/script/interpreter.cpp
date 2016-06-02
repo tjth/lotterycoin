@@ -385,14 +385,14 @@ bool EvalScript(
                     return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
 
                   if (NULL == chain) {
-                    LogPrintf("chain is null!!!");
+                    LogPrintf("chain is null!!!\n");
                     return set_error(serror, SCRIPT_ERR_BEACON_BLOCK_RANGE);
                   }
                    
                   //bits to push back (1 byte), start and end blocks to compute hash of (4 bytes) 
-                  valtype bits = stacktop(-1);
+                  valtype bits = stacktop(-3);
                   valtype endBlock = stacktop(-2);
-                  valtype startBlock = stacktop(-3);
+                  valtype startBlock = stacktop(-1);
 
                   //clean up arguments from stack
                   popstack(stack);
@@ -405,40 +405,57 @@ bool EvalScript(
                   LogPrintf("\nBEACON: seen bits=%d, startBlock=%d, endBlock=%d\n", 
                     bitsNum.getint(), startBlockNum.getint(), endBlockNum.getint());
 
-                  valtype finalHash;
+                  valtype finalHash(32);
                   valtype temp;
 
                   //for each block index in our range..
                   for (int i = startBlockNum.getint(); i <= endBlockNum.getint(); i++) {
+                    LogPrintf("Beacon loop i=%d\n", i);
                     CBlockIndex *blockIndex = (*chain)[i];
-
+                
                     //return error if out of range
-                    if (NULL == blockIndex) return set_error(serror, SCRIPT_ERR_BEACON_BLOCK_RANGE);
+                    if (NULL == blockIndex) {
+                        LogPrintf("No block at this range");
+                        return set_error(serror, SCRIPT_ERR_BEACON_BLOCK_RANGE);
+                    }
 
                     //get the block's hash
                     uint256 blockHash = blockIndex->GetBlockHash();
 
                     //convert hash into valtype
                     valtype blockHashValtype = blockHash.ToByteVector();
+                    LogPrintf("Blockhash:\n");
+                    printValtype(blockHashValtype);
+                    LogPrintf("DEBUG before concatenation\n");
 
                     //append current hash and this block's hash to temporary valtype
-                    temp.insert(temp.begin(), finalHash.begin(), finalHash.end());
                     temp.insert(temp.end(), blockHashValtype.begin(), blockHashValtype.end());
-                    finalHash.clear();
+                    LogPrintf("Temp valtype:");
+                    printValtype(temp);
+                    LogPrintf("DEBUG after concatenation\n");
 
                     //sha256 hash
-                    CHash256().Write(begin_ptr(temp), temp.size()).Finalize(begin_ptr(finalHash));
+                    //TODO: fix error with this write
+                    valtype current(32);
+                    CHash256().Write(begin_ptr(temp), temp.size()).Finalize(begin_ptr(current));
+
+                    LogPrintf("Done the hashing");
+                    LogPrintf("Current hash:");
+                    printValtype(current);
+
                     temp.clear();
+                    temp.insert(temp.begin(), current.begin(), current.end());
+ 
                   }
 
-                
-                  LogPrintf("Block hash bytes:\n");
+                  finalHash.insert(finalHash.begin(), temp.begin(), temp.end());
+                  LogPrintf("Final hash bytes:\n");
                   printValtype(finalHash);
 
 
                   //create the hash by restricting bits and push
                   valtype target = extractBitsNeeded(bitsNum.getint(), finalHash);
-                  LogPrintf("target hash bytes:\n");
+                  LogPrintf("Target hash bytes:\n");
                   printValtype(target);
                   stack.push_back(target);
                   break;
@@ -456,7 +473,6 @@ bool EvalScript(
                   printValtype(guess);
                   LogPrintf("Bits bytes:\n");
                   printValtype(bits);
-                  break;
 
                   // clean up top 2 stack items
                   popstack(stack);
@@ -473,6 +489,8 @@ bool EvalScript(
                   //shift the guessHash down to required number of bits
                   CScriptNum bitsNum(bits, false);
                   LogPrintf("\nFLEXIHASH: seen bit = %d\n", bitsNum.getint());
+
+                  //TODO: not working in extract
                   valtype guessShortenedHash = extractBitsNeeded(bitsNum.getint(), guessFullHash);
                   LogPrintf("Shortened hash bytes:\n");
                   printValtype(guessShortenedHash);
@@ -1085,32 +1103,38 @@ valtype extractBitsNeeded(int bitsOfRandomness, valtype currentHash)
 
   //how many unsigned chars do we need to look at
   int index = bitsOfRandomness / BITS_IN_BYTE;
+  cout << "In extraction: index:" << index << endl;
 
   //if more than we've got, just return what we have
-  if (index > length) return currentHash;
+  if (index >= length) return currentHash;
 
   valtype ret;
 
   //copy in the full unsigned chars that we want
   for (int i = 0; i < index; i++) {
-    ret[i] = currentHash[i];
+    ret.insert(ret.begin()+i, currentHash[i]);
   }
 
   //get the amount of bits we need from the top
   unsigned char topChar = currentHash[index];
+  LogPrintf("Top Char %x\n", topChar);
+
   int bitsFromTop = bitsOfRandomness % BITS_IN_BYTE;
 
   //extract these bits
   unsigned char extracted = topChar & ((1 << bitsFromTop) - 1);
+  LogPrintf("Extracted %x\n", extracted);
 
-  ret[index] = extracted;
+  ret.insert(ret.begin()+index, extracted);
+  cout << "In extraction: returning:" << endl;
+  printValtype(ret);
   return ret;
 }
 
 void printValtype(valtype vch) {
   //prints in normal binary form i.e. msb on the left
   for (unsigned int i = 0; i != vch.size(); i++) {
-    LogPrintf("%x", vch[i]);
+    LogPrintf("%x ", vch[i]);
   }
   LogPrintf("\n\n");
 }
@@ -1323,7 +1347,7 @@ bool VerifyScript(
         return false;
     if (flags & SCRIPT_VERIFY_P2SH)
         stackCopy = stack;
-    if (!EvalScript(stack, scriptPubKey, flags, checker, serror))
+    if (!EvalScript(stack, scriptPubKey, flags, checker, serror, chain))
         // serror is set
         return false;
     if (stack.empty())

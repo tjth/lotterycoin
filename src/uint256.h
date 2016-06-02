@@ -96,7 +96,7 @@ public:
     std::vector<unsigned char> ToByteVector()
     {
         std::vector<unsigned char> vch;
-        for (unsigned int i = 0; i < size(); i++) vch[i] = data[i];
+        for (unsigned int i = 0; i < WIDTH; i++) vch.insert(vch.begin()+i, data[i]);
         return vch;
     }
 };
