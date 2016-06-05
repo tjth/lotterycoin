@@ -16,6 +16,8 @@ typedef enum ScriptError_t
     /* Lottery entry/claim */
     SCRIPT_ERR_EVAL_FALSE_LOTTERY_CLAIM,
     SCRIPT_ERR_BEACON_BLOCK_RANGE,
+    SCRIPT_ERR_BAD_COMMITMENT_TO_GUESS,
+    SCRIPT_ERR_BAD_COMMITMENT_ENTRY_TX,
 
     /* Max sizes */
     SCRIPT_ERR_SCRIPT_SIZE,

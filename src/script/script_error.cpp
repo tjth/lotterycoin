@@ -17,6 +17,10 @@ const char* ScriptErrorString(const ScriptError serror)
             return "Lottery claim script finished with a false top stack element - incorrect claim";
         case SCRIPT_ERR_BEACON_BLOCK_RANGE:
             return "This miner cannot produce beacon based on supplied block range - not enough blocks";
+        case SCRIPT_ERR_BAD_COMMITMENT_TO_GUESS:
+            return "The claim transaction has a different guess to that supplied in the entry transaction - bad commitment.";
+        case SCRIPT_ERR_BAD_COMMITMENT_ENTRY_TX:
+            return "Cannot find given lottery entry tx that is being commited to";
         case SCRIPT_ERR_VERIFY:
             return "Script failed an OP_VERIFY operation";
         case SCRIPT_ERR_EQUALVERIFY:

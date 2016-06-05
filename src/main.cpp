@@ -910,8 +910,10 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
         // and only helps with filling in pfMissingInputs (to determine missing vs spent).
         BOOST_FOREACH(const CTxIn txin, tx.vin) {
             if (!pcoinsTip->HaveCoinsInCache(txin.prevout.hash))
+                LogPrintf("Don't have txin in cache");
                 vHashTxnToUncache.push_back(txin.prevout.hash);
             if (!view.HaveCoins(txin.prevout.hash)) {
+                LogPrintf("view doesn't have txin");
                 if (pfMissingInputs)
                     *pfMissingInputs = true;
                 return false; // fMissingInputs and !state.IsInvalid() is used to detect this condition, don't set state.Invalid()
@@ -1557,7 +1559,7 @@ void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCach
 
 bool CScriptCheck::operator()() {
     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;
-    if (!VerifyScript(scriptSig, scriptPubKey, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, cacheStore), &error, &chainActive)) {
+    if (!VerifyScript(scriptSig, scriptPubKey, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, cacheStore), &error, &chainActive, pcoinsTip)) {
         return false;
     }
     return true;
@@ -1650,8 +1652,6 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                 } else if (!check()) {
                     if (tx.vin[i].scriptSig.IsLotteryEntry()) {
                       // This is a lottery transaction with an incorrect guess
-                      //TODO: can we just leave here?
-                      LogPrintf("DBG: input %d is a lottery, skipping.\n");
                       continue;
                     }
                     if (flags & STANDARD_NOT_MANDATORY_VERIFY_FLAGS) {
@@ -1681,6 +1681,9 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                     // as to the correct behavior - we may want to continue
                     // peering with non-upgraded nodes even after a soft-fork
                     // super-majority vote has passed.
+
+                    // Here, the transaction may have a bad commitment to a lottery entry.
+                    // We DoS ban these as well.
                     return state.DoS(100,false, REJECT_INVALID, strprintf("mandatory-script-verify-flag-failed (%s)", ScriptErrorString(check.GetScriptError())));
                 }
             }
@@ -4687,6 +4690,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
         if (!AlreadyHave(inv) && AcceptToMemoryPool(mempool, state, tx, true, &fMissingInputs))
         {
+            LogPrintf("Main line 4693*************\n");
             mempool.check(pcoinsTip);
             RelayTransaction(tx);
             vWorkQueue.push_back(inv.hash);

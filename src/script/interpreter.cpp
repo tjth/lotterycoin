@@ -16,9 +16,14 @@
 #include "uint256.h"
 #include "util.h"
 
+#include "main.h"
+
 using namespace std;
 
 typedef vector<unsigned char> valtype;
+
+/* map between tx hashes and the hash of their guess */
+//unordered_map<uint256, valtype> lotteryEntries
 
 namespace {
 
@@ -234,9 +239,11 @@ bool EvalScript(
     const CScript& script, unsigned int flags,
     const BaseSignatureChecker& checker,
     ScriptError* serror,
-    CChain *chain
+    CChain *chain,
+    CCoinsViewCache *pCoins
     )
 {
+    LogPrintf("In EvalScript\n");
     static const CScriptNum bnZero(0);
     static const CScriptNum bnOne(1);
     static const CScriptNum bnFalse(0);
@@ -381,29 +388,35 @@ bool EvalScript(
 
                 case OP_BEACON:
                 {
-                  if (stack.size() < 3)
+                  LogPrintf("Entering Beacon interpreting***");
+                  if (stack.size() < 3) {
+                    LogPrintf("Stack not big enough");
                     return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+                  }
 
                   if (NULL == chain) {
                     LogPrintf("chain is null!!!\n");
                     return set_error(serror, SCRIPT_ERR_BEACON_BLOCK_RANGE);
                   }
                    
+                  LogPrintf("beacon got through first two checks.");
                   //bits to push back (1 byte), start and end blocks to compute hash of (4 bytes) 
                   valtype bits = stacktop(-3);
-                  valtype endBlock = stacktop(-2);
-                  valtype startBlock = stacktop(-1);
-
-                  //clean up arguments from stack
-                  popstack(stack);
-                  popstack(stack);
-                  popstack(stack);
+                  valtype startBlock = stacktop(-2);
+                  valtype endBlock = stacktop(-1);
 
                   CScriptNum bitsNum(bits, false);
                   CScriptNum startBlockNum(startBlock, false);
                   CScriptNum endBlockNum(endBlock, false);
                   LogPrintf("\nBEACON: seen bits=%d, startBlock=%d, endBlock=%d\n", 
                     bitsNum.getint(), startBlockNum.getint(), endBlockNum.getint());
+
+                  //clean up arguments from stack
+                  popstack(stack);
+                  popstack(stack);
+                  popstack(stack);
+
 
                   valtype finalHash(32);
                   valtype temp;
@@ -463,18 +476,87 @@ bool EvalScript(
 
                 case OP_FLEXIHASH:
                 {
-                  if (stack.size() < 2)
-                    return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+                  LogPrintf("Entering Flexihash interpreting***\n");
 
-                  // bits of randomness to produce, the actual guess
+                  if (stack.size() < 3) {
+                    LogPrintf("Flexihash stack not big enough");
+                    return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+                  }
+                    
+                  // bits of randomness to produce, the actual guess, block to start looking for the tx from, tx hash of entry
                   valtype bits = stacktop(-1);
                   valtype guess = stacktop(-2);
+                  valtype entrytxhash = stacktop(-3);
+
+                  //LogPrintf("Got entrytxhash of size {} and bytes:\n", entrytxhash.size());
+                  printValtype(entrytxhash);
+
+                  uint256 uintTxHash(entrytxhash); 
+                  
+                  //TODO: error here
+                  LogPrintf("FLEXIHASH: found entry tx hash:\n");
+                  LogPrintf(uintTxHash.ToString().c_str());
+                          
+
+                  // try to find transaction from UTXO set
+                  const CCoins *foundTx = pCoins->AccessCoins(uintTxHash);
+                  if (NULL == foundTx) {
+                    LogPrintf("FLEXIHASH: Couldn't find tx in utxo pool\n");
+                    return set_error(serror, SCRIPT_ERR_BAD_COMMITMENT_ENTRY_TX);
+                  }
+
+                  LogPrintf("FLEXIHASH: Found tx in utxo pool!");
+
+                  bool outputFound = false;
+
+                  //sha256 hash the guess here
+                  valtype claimGuessHash(32);
+                  CHash256().Write(begin_ptr(guess), guess.size()).Finalize(begin_ptr(claimGuessHash));
+                  LogPrintf("FLEXIHASH: guess:");
+                  printValtype(guess);
+
+                  LogPrintf("FLEXIHASH: guess hash:");
+                  printValtype(claimGuessHash);
+
+                  BOOST_FOREACH(CTxOut out, foundTx->vout) {
+                    if (out.IsNull()) continue; //has been spent 
+                    if (out.scriptPubKey.IsLotteryEntry()) {
+                        LogPrintf("Found lottery entry as txout of entry tx");
+                        //expect guess hash to be last 32 bytes of the lottery entry
+                        valtype entryGuessHash(32);
+
+                        //get the hashed guess at the end of the lottery entry output script (last 32 bytes)
+                        int size = out.scriptPubKey.size();
+                        for (int i = size-32; i < size; i++) {
+                            entryGuessHash[i+32-size] = (out.scriptPubKey)[i];
+                        }
+
+                        LogPrintf("FLEXIHASH: txout entry guess:");
+                        printValtype(entryGuessHash);
+
+                        //ensure the commitment to the guess
+                        if (compareValtypes(entryGuessHash, claimGuessHash)) {
+                            outputFound = true;
+                            LogPrintf("FLEXIHASH: they match!");
+                            break;
+                        }
+                    }
+                  }
+
+                  if (!outputFound) {
+                    LogPrintf("FLEXIHASH: no match!");
+                    return set_error(serror, SCRIPT_ERR_BAD_COMMITMENT_TO_GUESS);
+                  }
+
+                  //correct commitment!
+
                   LogPrintf("Guess bytes:\n");
                   printValtype(guess);
                   LogPrintf("Bits bytes:\n");
                   printValtype(bits);
 
-                  // clean up top 2 stack items
+                  // clean up top 3 stack items
+                  popstack(stack);
                   popstack(stack);
                   popstack(stack);
                     
@@ -1096,6 +1178,19 @@ bool EvalScript(
     return set_success(serror);
 }
 
+int compareValtypes(valtype v1, valtype v2) {
+    int size1 = v1.size();
+    int size2 = v2.size();
+
+    if (size1 != size2) return 0;
+
+    for (int i = 0; i < size1; i++) {
+        if (v1[i] != v2[i]) return 0;
+    }
+
+    return 1;
+}
+
 valtype extractBitsNeeded(int bitsOfRandomness, valtype currentHash)
 {
   int length = currentHash.size();
@@ -1332,9 +1427,11 @@ bool VerifyScript(
     unsigned int flags, 
     const BaseSignatureChecker& checker, 
     ScriptError* serror,
-    CChain *chain
+    CChain *chain,
+    CCoinsViewCache *pCoins
     )
 {
+    LogPrintf("In VerifyScript\n");
     set_error(serror, SCRIPT_ERR_UNKNOWN_ERROR);
 
     if ((flags & SCRIPT_VERIFY_SIGPUSHONLY) != 0 && !scriptSig.IsPushOnly()) {
@@ -1342,12 +1439,12 @@ bool VerifyScript(
     }
 
     vector<vector<unsigned char> > stack, stackCopy;
-    if (!EvalScript(stack, scriptSig, flags, checker, serror, chain))
+    if (!EvalScript(stack, scriptSig, flags, checker, serror, chain, pCoins))
         // serror is set
         return false;
     if (flags & SCRIPT_VERIFY_P2SH)
         stackCopy = stack;
-    if (!EvalScript(stack, scriptPubKey, flags, checker, serror, chain))
+    if (!EvalScript(stack, scriptPubKey, flags, checker, serror, chain, pCoins))
         // serror is set
         return false;
     if (stack.empty())
@@ -1377,7 +1474,7 @@ bool VerifyScript(
         CScript pubKey2(pubKeySerialized.begin(), pubKeySerialized.end());
         popstack(stack);
 
-        if (!EvalScript(stack, pubKey2, flags, checker, serror))
+        if (!EvalScript(stack, pubKey2, flags, checker, serror, chain, pCoins))
             // serror is set
             return false;
         if (stack.empty())

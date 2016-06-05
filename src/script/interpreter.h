@@ -7,6 +7,8 @@
 #define BITCOIN_SCRIPT_INTERPRETER_H
 
 #include "chain.h"
+#include "chainparams.h"
+#include "coins.h"
 #include "script_error.h"
 #include "primitives/transaction.h"
 
@@ -133,10 +135,13 @@ bool EvalScript(
     const CScript& script, unsigned int flags,
     const BaseSignatureChecker& checker, 
     ScriptError* error = NULL,
-    CChain *chain = NULL
+    CChain *chain = NULL,
+    CCoinsViewCache *pCoins = NULL
 );
 
 std::vector<unsigned char> extractBitsNeeded(int bitsOfRandomness, std::vector<unsigned char> currentHash);
+int compareValtypes(std::vector<unsigned char> v1, std::vector<unsigned char> v2);
+
 void printValtype(std::vector<unsigned char> vch);
 
 bool VerifyScript(
@@ -145,7 +150,8 @@ bool VerifyScript(
     unsigned int flags,
     const BaseSignatureChecker& checker,
     ScriptError* error = NULL,
-    CChain *chain = NULL
+    CChain *chain = NULL,
+    CCoinsViewCache *pCoins = NULL
 );
 
 #endif // BITCOIN_SCRIPT_INTERPRETER_H
