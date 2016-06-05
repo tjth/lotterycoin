@@ -448,6 +448,8 @@ bool EvalScript(
  
                   }
 
+                  temp.resize(32);
+
                   finalHash.insert(finalHash.begin(), temp.begin(), temp.end());
                   LogPrintf("Final hash bytes:\n");
                   printValtype(finalHash);
