@@ -910,15 +910,17 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
         // and only helps with filling in pfMissingInputs (to determine missing vs spent).
         BOOST_FOREACH(const CTxIn txin, tx.vin) {
             if (!pcoinsTip->HaveCoinsInCache(txin.prevout.hash))
-                LogPrintf("Don't have txin in cache");
+                LogPrintf("Don't have txin.prevout in cache\n");
                 vHashTxnToUncache.push_back(txin.prevout.hash);
             if (!view.HaveCoins(txin.prevout.hash)) {
-                LogPrintf("view doesn't have txin");
+                LogPrintf("view doesn't have txin\n");
                 if (pfMissingInputs)
                     *pfMissingInputs = true;
                 return false; // fMissingInputs and !state.IsInvalid() is used to detect this condition, don't set state.Invalid()
             }
         }
+
+        LogPrintf("Main got here, missing inputs is false\n");
 
         // are the actual inputs available?
         if (!view.HaveInputs(tx))

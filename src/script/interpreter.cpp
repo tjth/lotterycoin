@@ -240,7 +240,7 @@ bool EvalScript(
     const BaseSignatureChecker& checker,
     ScriptError* serror,
     CChain *chain,
-    CCoinsViewCache *pCoins
+    const CCoinsViewCache *pCoins
     )
 {
     LogPrintf("In EvalScript\n");
@@ -1428,7 +1428,7 @@ bool VerifyScript(
     const BaseSignatureChecker& checker, 
     ScriptError* serror,
     CChain *chain,
-    CCoinsViewCache *pCoins
+    const CCoinsViewCache *pCoins
     )
 {
     LogPrintf("In VerifyScript\n");

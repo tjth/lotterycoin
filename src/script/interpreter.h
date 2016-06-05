@@ -136,7 +136,7 @@ bool EvalScript(
     const BaseSignatureChecker& checker, 
     ScriptError* error = NULL,
     CChain *chain = NULL,
-    CCoinsViewCache *pCoins = NULL
+    const CCoinsViewCache *pCoins = NULL
 );
 
 std::vector<unsigned char> extractBitsNeeded(int bitsOfRandomness, std::vector<unsigned char> currentHash);
@@ -151,7 +151,7 @@ bool VerifyScript(
     const BaseSignatureChecker& checker,
     ScriptError* error = NULL,
     CChain *chain = NULL,
-    CCoinsViewCache *pCoins = NULL
+    const CCoinsViewCache *pCoins = NULL
 );
 
 #endif // BITCOIN_SCRIPT_INTERPRETER_H

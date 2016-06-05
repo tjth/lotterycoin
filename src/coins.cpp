@@ -135,6 +135,7 @@ CCoinsModifier CCoinsViewCache::ModifyNewCoins(const uint256 &txid, bool coinbas
 const CCoins* CCoinsViewCache::AccessCoins(const uint256 &txid) const {
     CCoinsMap::const_iterator it = FetchCoins(txid);
     if (it == cacheCoins.end()) {
+        LogPrintf("AccessCoins returning null\n");
         return NULL;
     } else {
         return &it->second.coins;
@@ -223,6 +224,7 @@ void CCoinsViewCache::Uncache(const uint256& hash)
     if (it != cacheCoins.end() && it->second.flags == 0) {
         cachedCoinsUsage -= it->second.coins.DynamicMemoryUsage();
         cacheCoins.erase(it);
+        LogPrintf("***CCoinsViewCache uncaching tx {}\n", hash.ToString());
     }
 }
 
