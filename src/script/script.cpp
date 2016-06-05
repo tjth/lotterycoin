@@ -227,9 +227,9 @@ bool CScript::IsLotteryEntry(const_iterator pc) const
     return false;
   if (opcode != OP_DROP) return false;
 
-  if (!GetOp(pc, opcode))
-    return false;
-  if (opcode != OP_BEACON) return false;
+  while (GetOp(pc, opcode)) {
+    if (opcode == OP_BEACON) break;
+  }
 
   if (!GetOp(pc, opcode))
     return false;
@@ -282,22 +282,9 @@ bool CScript::IsLotteryEntry() const
 bool CScript::IsLotteryClaim(const_iterator pc) const
 {
   //FORMAT:
-  // <claim> <bits> FLEXIHASH <bits>
-  // <endblock> <startblock> OP_1
+  // <claim> <bits> FLEXIHASH <bits> OP_1
 
-  return Find(OP_FLEXIHASH) == 1;
-
-  //TODO: fix this
-  /*opcodetype opcode;
-
-  while(GetOp(pc, opcode)) {
-    if (opcode == OP_FLEXIHASH) break;
-  }
-  if (opcode != OP_FLEXIHASH) return false;
-
-  while (GetOp(pc, opcode));
-
-  return opcode == OP_1;*/
+  return (Find(OP_FLEXIHASH) == 1) && ((*this)[this->size()-1] == OP_1);
 }
 
 bool CScript::IsLotteryClaim() const

@@ -293,11 +293,16 @@ CScript GetScriptForLotteryEntry()
     script << OP_IF;
     CScriptNum num1(100);
     script << num1;
-    script << OP_CHECKLOCKTIMEVERIFY << OP_DROP << OP_BEACON << OP_EQUAL;
+    script << OP_CHECKLOCKTIMEVERIFY << OP_DROP;
+
+    CScriptNum beaconStart(100);
+    CScriptNum beaconEnd(104);
+
+    script << beaconStart << beaconEnd << OP_BEACON << OP_EQUAL;
 
     script << OP_ELSE;
 
-    CScriptNum num2(102);
+    CScriptNum num2(106);
     script << num2;
     script << OP_CHECKLOCKTIMEVERIFY << OP_DROP;
     script << OP_DUP << OP_HASH160 << OP_PUBKEYHASH << OP_EQUALVERIFY << OP_CHECKSIG;
@@ -313,11 +318,8 @@ CScript GetExampleScriptForLotteryClaim()
 
     CScriptNum bits(6);
     CScriptNum claim(134);
-    CScriptNum startBlock(10);
-    CScriptNum endBlock(13);
 
     script << claim << bits << OP_FLEXIHASH << bits;
-    script << endBlock << startBlock;
 
     script << CScript::EncodeOP_N(1); 
 

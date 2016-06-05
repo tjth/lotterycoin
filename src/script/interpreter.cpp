@@ -391,19 +391,20 @@ bool EvalScript(
                    
                   //bits to push back (1 byte), start and end blocks to compute hash of (4 bytes) 
                   valtype bits = stacktop(-3);
-                  valtype endBlock = stacktop(-2);
-                  valtype startBlock = stacktop(-1);
-
-                  //clean up arguments from stack
-                  popstack(stack);
-                  popstack(stack);
-                  popstack(stack);
+                  valtype startBlock = stacktop(-2);
+                  valtype endBlock = stacktop(-1);
 
                   CScriptNum bitsNum(bits, false);
                   CScriptNum startBlockNum(startBlock, false);
                   CScriptNum endBlockNum(endBlock, false);
                   LogPrintf("\nBEACON: seen bits=%d, startBlock=%d, endBlock=%d\n", 
                     bitsNum.getint(), startBlockNum.getint(), endBlockNum.getint());
+
+                  //clean up arguments from stack
+                  popstack(stack);
+                  popstack(stack);
+                  popstack(stack);
+
 
                   valtype finalHash(32);
                   valtype temp;
@@ -435,7 +436,6 @@ bool EvalScript(
                     LogPrintf("DEBUG after concatenation\n");
 
                     //sha256 hash
-                    //TODO: fix error with this write
                     valtype current(32);
                     CHash256().Write(begin_ptr(temp), temp.size()).Finalize(begin_ptr(current));
 
@@ -1377,7 +1377,7 @@ bool VerifyScript(
         CScript pubKey2(pubKeySerialized.begin(), pubKeySerialized.end());
         popstack(stack);
 
-        if (!EvalScript(stack, pubKey2, flags, checker, serror))
+        if (!EvalScript(stack, pubKey2, flags, checker, serror, chain))
             // serror is set
             return false;
         if (stack.empty())
