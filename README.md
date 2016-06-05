@@ -1,3 +1,15 @@
+LotteryCoin: a fair, decentralized lottery over the Bitcoin protocol
+===================================================================
+
+LotteryCoin is a fork of the Bitcoin software extending transactions 
+to facilitate decentralized lotteries over the Bitcoin protocol. 
+
+The Bitcoin README continues below.
+
+====================================================================
+
+
+
 Bitcoin Core integration/staging tree
 =====================================
 
