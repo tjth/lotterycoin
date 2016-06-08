@@ -283,6 +283,9 @@ void PruneAndFlush();
 bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransaction &tx, bool fLimitFree,
                         bool* pfMissingInputs, bool fOverrideMempoolLimit=false, const CAmount nAbsurdFee=0);
 
+/** check lottery output is valid **/
+bool checkLotteryEntry(const CTxOut txout);
+
 /** Convert CValidationState to a human-readable message for logging */
 std::string FormatStateMessage(const CValidationState &state);
 
@@ -530,5 +533,8 @@ static const unsigned int REJECT_HIGHFEE = 0x100;
 static const unsigned int REJECT_ALREADY_KNOWN = 0x101;
 /** Transaction conflicts with a transaction already known */
 static const unsigned int REJECT_CONFLICT = 0x102;
+
+/** Reject codes for invalid lottery entries. */
+static const unsigned int REJECT_INVALID_LOTTERY_ENTRY= 0x103;
 
 #endif // BITCOIN_MAIN_H

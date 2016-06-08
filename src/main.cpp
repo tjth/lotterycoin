@@ -843,6 +843,14 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
     if (pool.exists(hash))
         return state.Invalid(false, REJECT_ALREADY_KNOWN, "txn-already-in-mempool");
 
+    // lottery-specific checks on the outputs if they are entries
+    BOOST_FOREACH(const CTxOut txout, tx.vout) {
+        if (txout.scriptPubKey.IsLotteryEntry()) {
+           if (!checkLotteryEntry(txout)) 
+               return state.Invalid(false, REJECT_INVALID_LOTTERY_ENTRY, "txn-contains-invalid-lottery-entry"); 
+        }
+    }
+
     // Check for conflicts with in-memory transactions
     set<uint256> setConflicts;
     {
@@ -1215,6 +1223,15 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
     }
 
     SyncWithWallets(tx, NULL, NULL);
+
+    return true;
+}
+
+bool checkLotteryEntry(CTxOut txout) {
+    assert(txout.scriptPubKey.IsLotteryEntry());
+
+    //check ouput value is 1 BTC
+    if (txout.nValue != COIN) return false;
 
     return true;
 }
