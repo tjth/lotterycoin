@@ -16,7 +16,6 @@ done
 chmod +x connect.sh
 
 SEEDDIR="seed_nodes"
-PREFIX="/home/tjt12/lotteryapp"
 LOTTERYCOINLOC="/home/tjt12/lotterycoin"
 
 mkdir $SEEDDIR
@@ -33,7 +32,7 @@ do
   port=$((${i}+18445))
   rpcport=$((${i}+20222))
   dbgport=$((${i}+30111))
-  args="-printtoconsole -datadir=$PREFIX/$SEEDDIR/$NEWDIR/data -regtest -daemon -printtoconsole -listen -port=$port -rpcport=$rpcport -rpcuser=test -rpcpassword=test -acceptnonstdtxn"
+  args="-printtoconsole -datadir=$LOTTERYCOINLOC/$SEEDDIR/$NEWDIR/data -regtest -daemon -printtoconsole -listen -port=$port -rpcport=$rpcport -rpcuser=test -rpcpassword=test -acceptnonstdtxn"
   com="$LOTTERYCOINLOC/src/bitcoind $args"
   
   touch log
@@ -47,7 +46,7 @@ do
 
   echo "$NEWDIR created."
   ./run_daemon.sh
-  cd $PREFIX
+  cd $LOTTERYCOINLOC
 done
 
 sleep 2
@@ -56,7 +55,7 @@ for i in `seq 1 $1`;
 do
   cd ${SEEDDIR}"/seed-daemon-$i"
   ./connect.sh >> log
-  cd $PREFIX
+  cd $LOTTERYCOINLOC
 done
 echo "Seed nodes connected."
 rm connect.sh
