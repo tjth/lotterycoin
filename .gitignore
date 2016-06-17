@@ -2,6 +2,7 @@
 *.swp
 *.wallet
 *.spvchain
+seed_nodes/
 
 #copy from Bitcoin's ignore
 *.tar.gz
